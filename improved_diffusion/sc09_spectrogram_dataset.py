@@ -61,6 +61,7 @@ class FixAudioLength(object):
 def load_sc09_data(data_dir, batch_size, n_mels=32, class_cond=False, deterministic=False):
 
     WaveTrans = Compose([LoadAudio(), FixAudioLength()])
+    # MelSpecTrans = torchaudio.transforms.MelSpectrogram(n_fft=2048, hop_length=512, n_mels=n_mels, norm='slaney', pad_mode='constant')  # for low version torchaudio
     MelSpecTrans = torchaudio.transforms.MelSpectrogram(n_fft=2048, hop_length=512, n_mels=n_mels, norm='slaney', pad_mode='constant', mel_scale='slaney')
     Amp2DB = torchaudio.transforms.AmplitudeToDB(stype='power')
     Wave2Spect = Compose([MelSpecTrans, Amp2DB]) # waveform (batch_size, 1, length) -> spectrogram (batch_size, 1, n_mels, 32)
