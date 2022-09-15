@@ -23,11 +23,45 @@ CLASSES = 'unknown, silence, yes, no, up, down, left, right, on, off, stop, go'.
 '''sc09'''
 SC09_CLASSES = 'zero, one, two, three, four, five, six, seven, eight, nine'.split(', ')
 
+class LoadAudio(object):
+    """Loads an audio into a numpy array."""
+
+    def __init__(self, sample_rate=16000):
+        self.sample_rate = sample_rate
+
+    def __call__(self, data):
+        path = data['path']
+        if path:
+            samples, sample_rate = librosa.load(path, sr=self.sample_rate)
+        else:
+            # silence
+            sample_rate = self.sample_rate
+            samples = np.zeros(sample_rate, dtype=np.float32)
+        data['samples'] = samples
+        data['sample_rate'] = sample_rate
+        return data
+
+class FixAudioLength(object):
+    """Either pads or truncates an audio into a fixed length."""
+
+    def __init__(self, time=1):
+        self.time = time
+
+    def __call__(self, data):
+        samples = data['samples']
+        sample_rate = data['sample_rate']
+        length = int(self.time * sample_rate)
+        if length < len(samples):
+            data['samples'] = samples[:length]
+        elif length > len(samples):
+            data['samples'] = np.pad(samples, (0, length - len(samples)), "constant")
+        return data
+
 def load_sc09_data(data_dir, batch_size, n_mels=32, class_cond=False, deterministic=False):
 
     MelSpecTrans = torchaudio.transforms.MelSpectrogram(n_fft=2048, hop_length=512, n_mels=n_mels, norm='slaney', pad_mode='constant', mel_scale='slaney')
     Amp2DB = torchaudio.transforms.AmplitudeToDB(stype='power')
-    Wave2Spect = Compose([MelSpecTrans.cuda(), Amp2DB.cuda()]) # waveform (batch_size, 1, length) -> spectrogram (batch_size, 1, n_mels, 32)
+    Wave2Spect = Compose([LoadAudio(), FixAudioLength(), MelSpecTrans.cuda(), Amp2DB.cuda()]) # waveform (batch_size, 1, length) -> spectrogram (batch_size, 1, n_mels, 32)
 
     dataset = SC09_Spectrogram_Dataset(folder=data_dir, transform=Wave2Spect)
 
