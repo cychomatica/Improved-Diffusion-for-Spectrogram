@@ -65,7 +65,7 @@ def load_sc09_data(data_dir, batch_size, n_mels=32, class_cond=False, determinis
     Amp2DB = torchaudio.transforms.AmplitudeToDB(stype='power')
     Wave2Spect = Compose([MelSpecTrans, Amp2DB]) # waveform (batch_size, 1, length) -> spectrogram (batch_size, 1, n_mels, 32)
 
-    dataset = SC09_Spectrogram_Dataset(folder=data_dir, wave_trans=WaveTrans, wave_to_spect=Wave2Spect)
+    dataset = SC09_Spectrogram_Dataset(folder=data_dir, wave_trans=WaveTrans, class_cond=class_cond, wave_to_spect=Wave2Spect)
 
     if deterministic:
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True)
@@ -147,7 +147,7 @@ class SC09_Spectrogram_Dataset(Dataset):
     See for more information: https://www.kaggle.com/c/tensorflow-speech-recognition-challenge
     """
 
-    def __init__(self, folder, wave_trans=None, wave_to_spect=None, classes=SC09_CLASSES, num_per_class=100):
+    def __init__(self, folder, wave_trans=None, wave_to_spect=None, classes=SC09_CLASSES, class_cond=False, num_per_class=100):
 
 
         all_classes = [d for d in classes if os.path.isdir(os.path.join(folder, d)) and not d.startswith('_')]
@@ -169,7 +169,7 @@ class SC09_Spectrogram_Dataset(Dataset):
                 path = os.path.join(d, f)
                 data.append((path, target))
 
-        self.classes = classes
+        self.used_classes = classes if class_cond else None
         self.data = data
         self.wave_trans = wave_trans
         self.wave_to_spect = wave_to_spect
@@ -186,7 +186,7 @@ class SC09_Spectrogram_Dataset(Dataset):
         spectrogram = self.wave_to_spect(waveform)
 
         out_dict = {}
-        if self.classes is not None:
+        if self.used_classes is not None:
             out_dict['y'] = np.array(target, dtype=np.int64)
         
         return spectrogram.numpy(), out_dict
@@ -194,7 +194,7 @@ class SC09_Spectrogram_Dataset(Dataset):
     def make_weights_for_balanced_classes(self):
         """adopted from https://discuss.pytorch.org/t/balanced-sampling-between-classes-with-torchvision-dataloader/2703/3"""
 
-        nclasses = len(self.classes)
+        nclasses = len(self.used_classes)
         count = np.zeros(nclasses)
         for item in self.data:
             count[item[1]] += 1
