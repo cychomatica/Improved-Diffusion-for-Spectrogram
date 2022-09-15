@@ -9,6 +9,7 @@ import librosa
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import *
 import torchaudio
+import torch
 
 # n_mels = 32
 # MelSpecTrans = torchaudio.transforms.MelSpectrogram(n_fft=2048, hop_length=512, n_mels=n_mels, norm='slaney', pad_mode='constant', mel_scale='slaney')
@@ -59,16 +60,17 @@ class FixAudioLength(object):
 
 def load_sc09_data(data_dir, batch_size, n_mels=32, class_cond=False, deterministic=False):
 
+    WaveTrans = Compose([LoadAudio(), FixAudioLength()])
     MelSpecTrans = torchaudio.transforms.MelSpectrogram(n_fft=2048, hop_length=512, n_mels=n_mels, norm='slaney', pad_mode='constant', mel_scale='slaney')
     Amp2DB = torchaudio.transforms.AmplitudeToDB(stype='power')
-    Wave2Spect = Compose([LoadAudio(), FixAudioLength(), MelSpecTrans.cuda(), Amp2DB.cuda()]) # waveform (batch_size, 1, length) -> spectrogram (batch_size, 1, n_mels, 32)
+    Wave2Spect = Compose([MelSpecTrans, Amp2DB]) # waveform (batch_size, 1, length) -> spectrogram (batch_size, 1, n_mels, 32)
 
-    dataset = SC09_Spectrogram_Dataset(folder=data_dir, transform=Wave2Spect)
+    dataset = SC09_Spectrogram_Dataset(folder=data_dir, wave_trans=WaveTrans, wave_to_spect=Wave2Spect)
 
     if deterministic:
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=True)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True)
     else:
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True)
     while True:
         yield from loader
     # return loader
@@ -145,11 +147,10 @@ class SC09_Spectrogram_Dataset(Dataset):
     See for more information: https://www.kaggle.com/c/tensorflow-speech-recognition-challenge
     """
 
-    def __init__(self, folder, transform=None, classes=SC09_CLASSES, num_per_class=100):
+    def __init__(self, folder, wave_trans=None, wave_to_spect=None, classes=SC09_CLASSES, num_per_class=100):
 
 
         all_classes = [d for d in classes if os.path.isdir(os.path.join(folder, d)) and not d.startswith('_')]
-
         
         for c in classes:
            assert c in all_classes
@@ -170,7 +171,8 @@ class SC09_Spectrogram_Dataset(Dataset):
 
         self.classes = classes
         self.data = data
-        self.transform = transform
+        self.wave_trans = wave_trans
+        self.wave_to_spect = wave_to_spect
 
     def __len__(self):
         return len(self.data)
@@ -179,10 +181,15 @@ class SC09_Spectrogram_Dataset(Dataset):
         path, target = self.data[index]
         data = {'path': path, 'target': target}
 
-        if self.transform is not None:
-            data = self.transform(data)
+        wave_data = self.wave_trans(data)
+        waveform, target = torch.from_numpy(wave_data['samples']).unsqueeze(0), wave_data['target']
+        spectrogram = self.wave_to_spect(waveform)
 
-        return data
+        out_dict = {}
+        if self.classes is not None:
+            out_dict['y'] = np.array(target, dtype=np.int64)
+        
+        return spectrogram.numpy(), out_dict
 
     def make_weights_for_balanced_classes(self):
         """adopted from https://discuss.pytorch.org/t/balanced-sampling-between-classes-with-torchvision-dataloader/2703/3"""
