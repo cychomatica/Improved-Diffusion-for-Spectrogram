@@ -28,7 +28,7 @@ def model_and_diffusion_defaults():
         timestep_respacing="",
         use_kl=False,
         predict_xstart=False,
-        rescale_timesteps=True,
+        rescale_timesteps=False,
         rescale_learned_sigmas=True,
         use_checkpoint=False,
         use_scale_shift_norm=True,

@@ -78,14 +78,14 @@ def create_argparser():
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
-    # model flags
+    # # model flags
     # defaults['image_size'] = 32
     # defaults['num_channels'] = 128
     # defaults['num_res_blocks'] = 3
     # defaults['learn_sigma'] = False
     # defaults['dropout'] = 0.3
     # # diffusion flags
-    # defaults['diffusion_steps'] = 1000
+    # defaults['diffusion_steps'] = 200
     # defaults['noise_schedule'] = 'linear'
     # # train_flags
     # defaults['lr'] = 1e-4
