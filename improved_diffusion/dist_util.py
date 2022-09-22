@@ -13,7 +13,7 @@ import torch.distributed as dist
 
 # Change this to reflect your cluster layout.
 # The GPU for a given rank is (rank % GPUS_PER_NODE).
-GPUS_PER_NODE = 8
+GPUS_PER_NODE = 4
 
 SETUP_RETRY_COUNT = 3
 
@@ -61,6 +61,25 @@ def load_state_dict(path, **kwargs):
         data = None
     data = MPI.COMM_WORLD.bcast(data)
     return th.load(io.BytesIO(data), **kwargs)
+
+    # print('use code of guided diffusion')
+    # chunk_size = 2 ** 30  # MPI has a relatively small size limit
+    # if MPI.COMM_WORLD.Get_rank() == 0:
+    #     with bf.BlobFile(path, "rb") as f:
+    #         data = f.read()
+    #     num_chunks = len(data) // chunk_size
+    #     if len(data) % chunk_size:
+    #         num_chunks += 1
+    #     MPI.COMM_WORLD.bcast(num_chunks)
+    #     for i in range(0, len(data), chunk_size):
+    #         MPI.COMM_WORLD.bcast(data[i : i + chunk_size])
+    # else:
+    #     num_chunks = MPI.COMM_WORLD.bcast(None)
+    #     data = bytes()
+    #     for _ in range(num_chunks):
+    #         data += MPI.COMM_WORLD.bcast(None)
+
+    # return th.load(io.BytesIO(data), **kwargs)
 
 
 def sync_params(params):

@@ -113,16 +113,15 @@ class TrainLoop:
 
     def _load_and_sync_parameters(self):
         resume_checkpoint = find_resume_checkpoint() or self.resume_checkpoint
-
         if resume_checkpoint:
             self.resume_step = parse_resume_step_from_filename(resume_checkpoint)
-            if dist.get_rank() == 0:
-                logger.log(f"loading model from checkpoint: {resume_checkpoint}...")
-                self.model.load_state_dict(
-                    dist_util.load_state_dict(
-                        resume_checkpoint, map_location=dist_util.dev()
-                    )
+            # if dist.get_rank() == 0:
+            logger.log(f"loading model from checkpoint: {resume_checkpoint}...")
+            self.model.load_state_dict(
+                dist_util.load_state_dict(
+                    resume_checkpoint, map_location=dist_util.dev()
                 )
+            )
 
         dist_util.sync_params(self.model.parameters())
 
@@ -132,12 +131,12 @@ class TrainLoop:
         main_checkpoint = find_resume_checkpoint() or self.resume_checkpoint
         ema_checkpoint = find_ema_checkpoint(main_checkpoint, self.resume_step, rate)
         if ema_checkpoint:
-            if dist.get_rank() == 0:
-                logger.log(f"loading EMA from checkpoint: {ema_checkpoint}...")
-                state_dict = dist_util.load_state_dict(
-                    ema_checkpoint, map_location=dist_util.dev()
-                )
-                ema_params = self._state_dict_to_master_params(state_dict)
+            # if dist.get_rank() == 0:
+            logger.log(f"loading EMA from checkpoint: {ema_checkpoint}...")
+            state_dict = dist_util.load_state_dict(
+                ema_checkpoint, map_location=dist_util.dev()
+            )
+            ema_params = self._state_dict_to_master_params(state_dict)
 
         dist_util.sync_params(ema_params)
         return ema_params
@@ -164,6 +163,10 @@ class TrainLoop:
             or self.step + self.resume_step < self.lr_anneal_steps
         ):
             batch, cond = next(self.data)
+            
+            '''mel-spectrogram range in [-100, 100]; need to be rescaled to [-1, 1]'''
+            batch = batch / 100.
+            
             self.run_step(batch, cond)
             if self.step % self.log_interval == 0:
                 logger.dumpkvs()
@@ -334,7 +337,14 @@ def get_blob_logdir():
 def find_resume_checkpoint():
     # On your infrastructure, you may want to override this to automatically
     # discover the latest checkpoint on your blob storage, etc.
-    return None
+    import glob
+    find_dir = os.getenv("OPENAI_LOGDIR")
+    model_list = glob.glob(os.path.join(find_dir, 'model*.pt'))
+    if len(model_list) > 0:
+        model_list.sort(key=lambda x: os.path.getmtime(x))
+        return model_list[-1]
+    else:
+        return None
 
 
 def find_ema_checkpoint(main_checkpoint, step, rate):
