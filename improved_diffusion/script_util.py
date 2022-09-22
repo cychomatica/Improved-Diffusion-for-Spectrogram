@@ -15,11 +15,11 @@ def model_and_diffusion_defaults():
     return dict(
         image_size=32,
         num_channels=128,
-        num_res_blocks=2,
+        num_res_blocks=3,
         num_heads=4,
         num_heads_upsample=-1,
         attention_resolutions="16,8",
-        dropout=0.0,
+        dropout=0.3,
         learn_sigma=False,
         sigma_small=False,
         class_cond=False,

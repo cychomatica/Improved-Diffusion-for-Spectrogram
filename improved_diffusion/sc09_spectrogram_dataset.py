@@ -58,6 +58,28 @@ class FixAudioLength(object):
             data['samples'] = np.pad(samples, (0, length - len(samples)), "constant")
         return data
 
+# calculated from full SC09 Mle-spectrogram dataset
+MEL_UPPER_BOUND = 38.22
+MEL_LOWER_BOUND = -100.0
+
+def melspec_standardize(x):
+    '''
+        scale mel-spectrogram to [-1,1]
+    '''
+    # assert x.max() <= MEL_UPPER_BOUND and x.min() >= MEL_LOWER_BOUND
+    x = 2 * (x - MEL_LOWER_BOUND) / (MEL_UPPER_BOUND - MEL_LOWER_BOUND) - 1
+    # assert x.max() <= 1 and x.min() >= -1
+    return x
+
+def melspec_inv_standardize(x):
+    '''
+        map values in [-1,1] back to mel-scale
+    '''
+    # assert x.max() <= 1 and x.min() >= -1; ''
+    x = (x + 1) * (MEL_UPPER_BOUND - MEL_LOWER_BOUND) / 2 + MEL_LOWER_BOUND
+    # assert x.max() <= MEL_UPPER_BOUND and x.min() >= MEL_LOWER_BOUND
+    return x
+
 def load_sc09_data(data_dir, batch_size, n_mels=32, class_cond=False, deterministic=False):
 
     WaveTrans = Compose([LoadAudio(), FixAudioLength()])
@@ -148,7 +170,7 @@ class SC09_Spectrogram_Dataset(Dataset):
     See for more information: https://www.kaggle.com/c/tensorflow-speech-recognition-challenge
     """
 
-    def __init__(self, folder, wave_trans=None, wave_to_spect=None, classes=SC09_CLASSES, class_cond=False, num_per_class=100):
+    def __init__(self, folder, wave_trans=None, wave_to_spect=None, classes=SC09_CLASSES, class_cond=False, num_per_class=74751):
 
 
         all_classes = [d for d in classes if os.path.isdir(os.path.join(folder, d)) and not d.startswith('_')]

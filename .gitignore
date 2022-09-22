@@ -4,5 +4,5 @@ __pycache__/
 .history/
 _checkpoints/
 *.pt
-test.py
+improved_diffusion_test.py
 sc09_spec_value_range.py

@@ -19,7 +19,7 @@ from .fp16_util import (
 )
 from .nn import update_ema
 from .resample import LossAwareSampler, UniformSampler
-
+from .sc09_spectrogram_dataset import melspec_standardize, melspec_inv_standardize
 # For ImageNet experiments, this was a good default value.
 # We found that the lg_loss_scale quickly climbed to
 # 20-21 within the first ~1K steps of training.
@@ -165,8 +165,8 @@ class TrainLoop:
             batch, cond = next(self.data)
             
             '''mel-spectrogram range in [-100, 100]; need to be rescaled to [-1, 1]'''
-            batch = batch / 100.
-            
+            batch = melspec_standardize(batch)
+                        
             self.run_step(batch, cond)
             if self.step % self.log_interval == 0:
                 logger.dumpkvs()

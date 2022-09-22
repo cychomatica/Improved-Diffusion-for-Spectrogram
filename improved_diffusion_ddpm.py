@@ -6,6 +6,7 @@ from typing import Union
 from improved_diffusion.script_util import create_model_and_diffusion
 from improved_diffusion.gaussian_diffusion import GaussianDiffusion
 from improved_diffusion.unet import UNetModel
+from improved_diffusion.sc09_spectrogram_dataset import melspec_standardize, melspec_inv_standardize
 
 class ImprovedDiffusion(torch.nn.Module):
     
@@ -32,6 +33,12 @@ class ImprovedDiffusion(torch.nn.Module):
         # with torch.no_grad():
         output = self._diffusion(waveforms)
         output = self._reverse(output)
+        
+        '''
+            the original mel-spectrogram is divided by 100 to get x_0 ranging in [-1,1]; 
+            the output should multiply 100 to remap to mel-scle
+        '''
+        output = melspec_inv_standardize(output)
         
         return output
 
