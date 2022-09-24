@@ -206,15 +206,15 @@ class RevImprovedDiffusion(torch.nn.Module):
             x0 = xs_[-1].view(x.shape)  # (batch_size, c, h, w)
             x0 = melspec_inv_standardize(x0)
             
-            import librosa
-            import librosa.display
-            import matplotlib.pyplot as plt
-            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-            fig = plt.Figure()
-            canvas = FigureCanvas(fig)
-            ax = fig.add_subplot(111)
-            p = librosa.display.specshow(librosa.amplitude_to_db(x0[0].detach().cpu().numpy()), ax=ax, y_axis='log', x_axis='time')
-            fig.savefig('spec.png')
+            # import librosa
+            # import librosa.display
+            # import matplotlib.pyplot as plt
+            # from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            # fig = plt.Figure()
+            # canvas = FigureCanvas(fig)
+            # ax = fig.add_subplot(111)
+            # p = librosa.display.specshow(librosa.amplitude_to_db(x0[0].detach().cpu().numpy()), ax=ax, y_axis='log', x_axis='time')
+            # fig.savefig('spec.png')
             
             xs.append(x0)
 
